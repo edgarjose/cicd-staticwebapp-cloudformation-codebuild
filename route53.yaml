@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Creates a record set in Route 53
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Route 53 Configuration"
+        Parameters:
+          - HostedZoneID
+          - DomainName
+          - ALBDNSName
+
+Parameters:
+  ALBZoneID:
+    Description: The hosted zone ID
+    Type: String
+  
+  DomainName:
+    Description: The domain name
+    Type: String
+    Default: praticalcloudlab.com
+  
+  ALBDNS:
+    Description: The DNS name of the ALB
+    Type: String
+
+Resources:
+  # Record set group for the ALB
+  WebsiteDomainName:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneName: !Join ['', [!Ref DomainName, '.']]
+      RecordSets:
+        - Name: !Join
+          - ''
+          - - 'www.'
+            - !Ref DomainName
+          Type: A
+          AliasTarget:
+            DNSName: !Ref ALBDNS
+            HostedZoneId: !Ref ALBZoneID
+
+Outputs:
+  WebsiteURL:
+    Description: The URL of the website
+    Value: !Join
+      - ''
+      - - 'https://www.'
+        - !Ref DomainName

@@ -1,0 +1,37 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.9
+    commands:
+      - echo "Installing AWS CLI..."
+      - pip install awscli --upgrade
+
+  pre_build:
+    commands:
+      - echo "Listing files in the working directory..."
+      - ls -al
+      - echo "Navigating to project directory"
+      - cd demo-project
+      - echo "Verifying files inside the project directory"
+      - ls -al
+
+  build:
+    commands:
+      - echo "Validating CloudFormation templates..."
+      - for template in master.yaml vpc.yaml natgateway.yaml alb.yaml asg.yaml route53.yaml; do
+          aws cloudformation validate-template --template-body file://$template || { echo "Validation failed for $template" && exit 1; }
+        done
+
+      - echo "Deploying CloudFormation stack..."
+      - aws cloudformation deploy --template-file master.yaml --stack-name two-tier-web-app-template --capabilities CAPABILITY_NAMED_IAM
+
+artifacts:
+  files:
+    - master.yaml
+    - vpc.yaml
+    - natgateway.yaml
+    - alb.yaml
+    - asg.yaml
+    - route53.yaml

@@ -1,0 +1,285 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: 
+  VPC with public and private subnets
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "VPC Configuration"
+        Parameters:
+          - VpcCIDR
+          - SubnetPubicaCIDR1
+          - SubnetPubicaCIDR2
+          - SubnetPrivadaCIDR1
+          - SubnetPrivadaCIDR2
+
+Parameters:
+  VpcCIDR:
+    Type: String
+    Default: 10.0.0.0/16
+    Description: "IP range for the VPC"
+  
+  SubnetPubicaCIDR1:
+    Type: String
+    Default: 10.0.0.0/24
+    Description: "IP range for the public subnet 1"
+  
+  SubnetPubicaCIDR2:
+    Type: String
+    Default: 10.0.1.0/24
+    Description: "IP range for the public subnet 2"
+  
+  SubnetPrivadaCIDR1:
+    Type: String
+    Default: 10.0.2.0/24
+    Description: "IP range for the private subnet 1"
+  
+  SubnetPrivadaCIDR2:
+    Type: String
+    Default: 10.0.3.0/24
+    Description: "IP range for the private subnet 2"
+
+Resources:
+  # VPC
+  PraticalVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 
+        Ref: VpcCIDR
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: "PraticalVPC"
+
+  # Internet Gateway
+  PraticalInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: "PraticalVPC-IGW"
+    
+  # Attach internet gateway to VPC
+  PraticalAttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: PraticalVPC
+      InternetGatewayId:
+        Ref: PraticalInternetGateway
+
+  # Public Subnet 1
+  SubnetPublica1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: 
+        Ref: PraticalVPC
+      CidrBlock: 
+        Ref: SubnetPubicaCIDR1
+      AvailabilityZone: "us-east-1a"
+      Tags:
+        - Key: Name
+          Value: "PraticalVPC-Public1"
+    
+  # Public Subnet 2
+  SubnetPublica2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: 
+        Ref: PraticalVPC
+      CidrBlock: 
+        Ref: SubnetPubicaCIDR2
+      AvailabilityZone: "us-east-1b"
+      Tags:
+        - Key: Name
+          Value: "PraticalVPC-Public2"
+
+# Route table for public subnet
+  TabelaRoteamentoPublica:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:  
+        Ref: PraticalVPC
+      Tags:
+        - Key: Name
+          Value: "PraticalVPC-Public-RT-1"
+
+  # Public Route
+  RotaPublica:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: TabelaRoteamentoPublica
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: PraticalInternetGateway
+
+  # Associate public subnet 1 with route table
+  AssociarRotaPublica1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: SubnetPublica1
+      RouteTableId:
+        Ref: TabelaRoteamentoPublica
+
+  # Associate public subnet 2 with route table
+  AssociarRotaPublica2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId:
+        Ref: SubnetPublica2
+      RouteTableId:
+        Ref: TabelaRoteamentoPublica
+# Private Subnet 1
+  SubnetPrivada1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: 
+        Ref: PraticalVPC
+      CidrBlock: 
+        Ref: SubnetPrivadaCIDR1
+      AvailabilityZone: "us-east-1a"
+      Tags:
+        - Key: Name
+          Value: "PraticalVPC-Private1"
+    
+  # Private Subnet 2
+  SubnetPrivada2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: 
+        Ref: PraticalVPC
+      CidrBlock: 
+        Ref: SubnetPrivadaCIDR2
+      AvailabilityZone: "us-east-1b"
+      Tags:
+        - Key: Name
+          Value: "PraticalVPC-Private2"
+# Security group for ALB
+  GrupSegurancaALB:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Security group for ALB"
+      VpcId: 
+        Ref: PraticalVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+          CidrIp: 0.0.0.0/0
+      Tags: 
+        - Key: Name
+          Value: "PraticalVPC-ALB-SG"
+
+  # Security group for SSH
+  GrupoSegurancaSSH:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Security group for SSH"
+      VpcId: 
+        Ref: PraticalVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: 0.0.0.0/0
+      Tags: 
+        - Key: Name
+          Value: "PraticalVPC-SSH-SG"
+
+  # Security group for web servers
+  GrupoSegurancaWeb:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Security group for web servers"
+      VpcId: 
+        Ref: PraticalVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          SourceSecurityGroupId: 
+            Ref: GrupSegurancaALB 
+        - IpProtocol: tcp
+          FromPort: '443'
+          ToPort: '443'
+          SourceSecurityGroupId: 
+            Ref: GrupSegurancaALB
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          SourceSecurityGroupId: 
+            Ref: GrupoSegurancaSSH 
+      Tags: 
+        - Key: Name
+          Value: "PraticalVPC-WebServers-SG"
+
+  # Security group for database
+  GrupoSegurancaDB:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Security group for database"
+      VpcId: 
+        Ref: PraticalVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '3306'
+          ToPort: '3306'
+          SourceSecurityGroupId: 
+            Ref: GrupoSegurancaWeb 
+      Tags: 
+        - Key: Name
+          Value: "PraticalVPC-DB-SG"
+
+Outputs:
+  VpcID:
+    Description: The ID of the VPC
+    Value: 
+      Ref: PraticalVPC
+  
+  PublicSubnet1:
+    Description: The ID of the public subnet 1
+    Value: 
+      Ref: SubnetPublica1
+  
+  PublicSubnet2:
+    Description: The ID of the public subnet 2
+    Value: 
+      Ref: SubnetPublica2
+  
+  PrivateSubnet1:
+    Description: The ID of the private subnet 1
+    Value: 
+      Ref: SubnetPrivada1
+  
+  PrivateSubnet2:
+    Description: The ID of the private subnet 2
+    Value: 
+      Ref: SubnetPrivada2
+
+  SecurityGroupALB:
+    Description: "Security Group for ALB"
+    Value: 
+      Ref: GrupSegurancaALB
+  
+  SecurityGroupSSH:
+    Description: "Security Group for SSH"
+    Value: 
+      Ref: GrupoSegurancaSSH
+
+  SecurityGroupWeb:
+    Description: "Security Group for web servers"
+    Value: 
+      Ref: GrupoSegurancaWeb
+  
+  SecurityGroupDB:
+    Description: "Security Group for DB servers"
+    Value: 
+      Ref: GrupoSegurancaDB

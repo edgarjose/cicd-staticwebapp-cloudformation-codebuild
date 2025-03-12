@@ -1,0 +1,127 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Creates Auto Scaling Group
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Export VPC and ALB Stack Names"
+        Parameters:
+          - VpcID
+          - PrivateSubnet1
+          - PrivateSubnet2
+      - Label:
+          default: "Compute Configuration"
+        Parameters:
+          - AmiId
+          - InstanceType
+          - SecurityGroupWeb
+          - ALBTargetGroup
+
+Parameters:
+  VpcID:
+    Description: Import VPC ID
+    Type: String
+
+  PrivateSubnet1:
+    Description: Import private subnet 2
+    Type: String
+  
+  PrivateSubnet2:
+    Description: Import private subnet 1
+    Type: String
+  
+  SecurityGroupWeb:
+    Description: Import Web server security Group
+    Type: String
+
+  ALBTargetGroup:
+    Description: Importa ALB Target Group
+    Type: String
+  
+  AmiId:
+    Description: Region specific image from the Parameter Store
+    Type: String
+    Default: ami-0df8c184d5f6ae949
+    AllowedValues:
+      - ami-0df8c184d5f6ae949
+      - ami-04b4f1a9cf54c11d0
+      - ami-085ad6ae776d8f09c
+
+  InstanceType:
+    Description: Amazon EC2 instance type for the instances
+    Type: String
+    AllowedValues:
+      - t2.micro
+      - t2.nano
+      - t2.small
+    Default: t2.micro
+
+Resources:
+  # Launch Template for EC2 instances
+  PraticalLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: PraticalLaunchTemplate
+      LaunchTemplateData:
+        ImageId: !Ref AmiId
+        InstanceType: !Ref InstanceType
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            yum install -y httpd unzip wget
+            service httpd start
+            chkconfig httpd on
+            cd /var/www/html
+            wget https://github.com/edgarjose/festava_live/archive/refs/heads/main.zip
+            unzip main.zip
+            cp -r festava_live-main/* /var/www/html/
+            rm -rf festava_live-main main.zip
+        SecurityGroupIds:
+          - !Ref SecurityGroupWeb
+        Monitoring:
+          Enabled: true
+
+  # Auto Scaling Group
+  PraticalAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      DesiredCapacity: 2
+      HealthCheckGracePeriod: 300
+      HealthCheckType: ELB
+      Cooldown: 300
+      LaunchTemplate:
+        LaunchTemplateId: !Ref PraticalLaunchTemplate
+        Version: !GetAtt PraticalLaunchTemplate.LatestVersionNumber
+      MaxSize: 4
+      MinSize: 2
+      TargetGroupARNs:
+        - !Ref ALBTargetGroup
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      Tags:
+        - Key: Name
+          Value: WebServerAutoScaling
+          PropagateAtLaunch: true
+
+  PraticalCpuUpPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref PraticalAutoScalingGroup
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: 70
+  
+  PraticalCpuDownPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref PraticalAutoScalingGroup
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: 30

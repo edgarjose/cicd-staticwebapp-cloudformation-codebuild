@@ -1,0 +1,129 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Creates Nat Gateway in each public subnet 
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: "Export VPC and ALB Stack Names"
+        Parameters:
+          - VpcID
+          - PublicSubnet1
+          - PublicSubnet2
+          - PrivateSubnet1
+          - PrivateSubnet2
+
+Parameters:
+  VpcID:
+    Description: Import VPC ID
+    Type: String
+  
+  PublicSubnet1:
+    Description: Import Public subnet 1
+    Type: String
+
+  PublicSubnet2:
+    Description: Import Public subnet 2
+    Type: String
+
+  PrivateSubnet1:
+    Description: Import private subnet 1
+    Type: String
+  
+  PrivateSubnet2:
+    Description: Import private subnet 2
+    Type: String
+
+Resources:
+  # Elastic IP for NAT Gateway 1
+  NatGatewayEIP1:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: VPC
+      Tags: 
+        - Key: Name 
+          Value: "PraticalVPC-NAT-EIP1"
+
+  # Elastic IP for NAT Gateway 2
+  NatGatewayEIP2:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: VPC
+      Tags: 
+        - Key: Name 
+          Value: "PraticalVPC-NAT-EIP2"
+
+  # NAT Gateway 1
+  NatGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: 
+        Fn::GetAtt:
+          - NatGatewayEIP1
+          - AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: "PraticalVPC-NAT-GW1"
+
+  # NAT Gateway 2
+  NatGateway2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: 
+        Fn::GetAtt:
+          - NatGatewayEIP2
+          - AllocationId
+      SubnetId: !Ref PublicSubnet2
+      Tags:
+        - Key: Name
+          Value: "PraticalVPC-NAT-GW2"
+  
+  # Route table for private subnet 1
+  TabelaRoteamentoPrivada1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VpcID
+      Tags:
+        - Key: Name
+          Value: "PraticalVPC-Private-RT-1"
+
+  # Private Route 1
+  RotaPrivada1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref TabelaRoteamentoPrivada1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway1
+    
+  # Associate private subnet 1 with route table
+  AssociarRotaPrivada1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref TabelaRoteamentoPrivada1
+    
+  # Route table for private subnet 2
+  TabelaRoteamentoPrivada2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref VpcID
+      Tags:
+        - Key: Name
+          Value: "PraticalVPC-Private-RT-2"
+
+  # Private Route 2
+  RotaPrivada2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref TabelaRoteamentoPrivada2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref NatGateway2
+    
+  # Associate private subnet 2 with route table
+  AssociarRotaPrivada2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref TabelaRoteamentoPrivada2
