@@ -6,12 +6,12 @@ Resources:
   VPCStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://demo-cicd-project-bucket.s3.us-east-1.amazonaws.com/demo-project/vpc.yaml
+      TemplateURL: https://bucket.s3.us-east-1.amazonaws.com/templatefolder/vpc.yaml
   
   NatGatewayStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://demo-cicd-project-bucket.s3.us-east-1.amazonaws.com/demo-project/natgateway.yaml
+      TemplateURL: https://bucket.s3.us-east-1.amazonaws.com/templatefolder/natgateway.yaml
       Parameters:
         VpcID: !GetAtt VPCStack.Outputs.VpcID
         PublicSubnet1: !GetAtt VPCStack.Outputs.PublicSubnet1
@@ -22,7 +22,7 @@ Resources:
   ALBStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://demo-cicd-project-bucket.s3.us-east-1.amazonaws.com/demo-project/alb.yaml
+      TemplateURL: https://bucket.s3.us-east-1.amazonaws.com/templatefolder/alb.yaml
       Parameters:
         VpcID: !GetAtt VPCStack.Outputs.VpcID
         PublicSubnet1: !GetAtt VPCStack.Outputs.PublicSubnet1
@@ -32,7 +32,7 @@ Resources:
   ASGStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://demo-cicd-project-bucket.s3.us-east-1.amazonaws.com/demo-project/asg.yaml
+      TemplateURL: https://bucket.s3.us-east-1.amazonaws.com/templatefolder/asg.yaml
       Parameters:
         VpcID: !GetAtt VPCStack.Outputs.VpcID
         PrivateSubnet1: !GetAtt VPCStack.Outputs.PrivateSubnet1
@@ -43,7 +43,7 @@ Resources:
   ROUTE53Stack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://demo-cicd-project-bucket.s3.us-east-1.amazonaws.com/demo-project/route53.yaml
+      TemplateURL: https://bucket.s3.us-east-1.amazonaws.com/templatefolder/route53.yaml
       Parameters:
         ALBZoneID: !GetAtt ALBStack.Outputs.ALBZoneID
         ALBDNS: !GetAtt ALBStack.Outputs.ALBDNS
