@@ -13,7 +13,7 @@ phases:
       - echo "Listing files in the working directory..."
       - ls -al
       - echo "Navigating to project directory"
-      - cd directoryname
+      - cd projectfolder
       - echo "Verifying files inside the project directory"
       - ls -al
 
@@ -25,7 +25,12 @@ phases:
         done
 
       - echo "Deploying CloudFormation stack..."
-      - aws cloudformation deploy --template-file master.yaml --stack-name two-tier-web-app-template --capabilities CAPABILITY_NAMED_IAM
+      - aws cloudformation deploy --template-file master.yaml --stack-name codebuilddemoproject --capabilities CAPABILITY_NAMED_IAM
+
+      - echo "Retrieving Route 53 output from the nested stack..."
+      - ROUTE53_STACK_NAME=$(aws cloudformation describe-stack-resources --stack-name codebuilddemoproject --query "StackResources[?LogicalResourceId=='ROUTE53Stack'].PhysicalResourceId" --output text)
+      - DOMAIN_NAME=$(aws cloudformation describe-stacks --stack-name $ROUTE53_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='WebsiteURL'].OutputValue" --output text)
+      - echo "Website is available at - $DOMAIN_NAME"
 
 artifacts:
   files:
