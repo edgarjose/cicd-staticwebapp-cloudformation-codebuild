@@ -13,7 +13,7 @@ phases:
       - echo "Listing files in the working directory..."
       - ls -al
       - echo "Navigating to project directory"
-      - cd demo-project
+      - cd directoryname
       - echo "Verifying files inside the project directory"
       - ls -al
 
