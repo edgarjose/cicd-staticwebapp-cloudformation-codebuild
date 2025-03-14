@@ -20,7 +20,7 @@ Parameters:
   DomainName:
     Description: The domain name
     Type: String
-    Default: praticalcloudlab.com
+    Default: yourdomain.com
   
   ALBDNS:
     Description: The DNS name of the ALB
