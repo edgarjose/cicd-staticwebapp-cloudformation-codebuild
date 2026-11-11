@@ -8,20 +8,19 @@ Metadata:
       - Label:
           default: "Route 53 Configuration"
         Parameters:
-          - HostedZoneID
+          - ALBZoneID
           - DomainName
-          - ALBDNSName
+          - ALBDNS
 
 Parameters:
   ALBZoneID:
     Description: The hosted zone ID
     Type: String
-  
+
   DomainName:
     Description: The domain name
     Type: String
-    Default: yourdomain.com
-  
+
   ALBDNS:
     Description: The DNS name of the ALB
     Type: String

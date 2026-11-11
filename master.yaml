@@ -2,49 +2,63 @@ AWSTemplateFormatVersion: "2010-09-09"
 
 Description: Master stack that deploys VPC, ALB, ASG and Route 53 record group as nested stack.
 
+Parameters:
+  ACMCertificateArn:
+    Type: String
+    Description: Issued ACM certificate in the ALB Region covering www.DomainName
+  DomainName:
+    Type: String
+    Description: Existing public hosted zone domain, without a trailing dot
+
 Resources:
   VPCStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://bucket.s3.us-east-1.amazonaws.com/templatefolder/vpc.yaml
-  
+      TemplateURL: vpc.yaml
+
   NatGatewayStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://bucket.s3.us-east-1.amazonaws.com/templatefolder/natgateway.yaml
+      TemplateURL: natgateway.yaml
       Parameters:
         VpcID: !GetAtt VPCStack.Outputs.VpcID
         PublicSubnet1: !GetAtt VPCStack.Outputs.PublicSubnet1
         PublicSubnet2: !GetAtt VPCStack.Outputs.PublicSubnet2
         PrivateSubnet1: !GetAtt VPCStack.Outputs.PrivateSubnet1
         PrivateSubnet2: !GetAtt VPCStack.Outputs.PrivateSubnet2
-    
+
   ALBStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://bucket.s3.us-east-1.amazonaws.com/templatefolder/alb.yaml
+      TemplateURL: alb.yaml
       Parameters:
         VpcID: !GetAtt VPCStack.Outputs.VpcID
         PublicSubnet1: !GetAtt VPCStack.Outputs.PublicSubnet1
         PublicSubnet2: !GetAtt VPCStack.Outputs.PublicSubnet2
         SecurityGroupALB: !GetAtt VPCStack.Outputs.SecurityGroupALB
+        ACMCertificateArn: !Ref ACMCertificateArn
 
   ASGStack:
     Type: AWS::CloudFormation::Stack
+    DependsOn: NatGatewayStack
     Properties:
-      TemplateURL: https://bucket.s3.us-east-1.amazonaws.com/templatefolder/asg.yaml
+      TemplateURL: asg.yaml
       Parameters:
         VpcID: !GetAtt VPCStack.Outputs.VpcID
         PrivateSubnet1: !GetAtt VPCStack.Outputs.PrivateSubnet1
         PrivateSubnet2: !GetAtt VPCStack.Outputs.PrivateSubnet2
         SecurityGroupWeb: !GetAtt VPCStack.Outputs.SecurityGroupWeb
         ALBTargetGroup: !GetAtt ALBStack.Outputs.ALBTargetGroup
-      
+
   ROUTE53Stack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://bucket.s3.us-east-1.amazonaws.com/templatefolder/route53.yaml
+      TemplateURL: route53.yaml
       Parameters:
         ALBZoneID: !GetAtt ALBStack.Outputs.ALBZoneID
         ALBDNS: !GetAtt ALBStack.Outputs.ALBDNS
-  
+        DomainName: !Ref DomainName
+
+Outputs:
+  WebsiteURL:
+    Value: !GetAtt ROUTE53Stack.Outputs.WebsiteURL
