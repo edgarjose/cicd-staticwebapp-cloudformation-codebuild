@@ -16,7 +16,7 @@ Metadata:
           default: "Certificate Configuration"
         Parameters:
           - ACMCertificateArn
-     
+
 Parameters:
   VpcID:
     Description: The name of the VPC stack
@@ -25,8 +25,7 @@ Parameters:
   ACMCertificateArn:
     Description: The ARN of the ACM certificate
     Type: String
-    Default: arn:aws:acm:us-east-1:426361357193:certificate/9ee554b5-ea36-472e-a0d5-b19caf420c41
-  
+
   PublicSubnet1:
     Description: Import Public subnet 1
     Type: String
@@ -34,7 +33,7 @@ Parameters:
   PublicSubnet2:
     Description: Import Public subnet 2
     Type: String
-  
+
   SecurityGroupALB:
     Description: Import ALB Security group
     Type: String
@@ -47,8 +46,7 @@ Resources:
       LoadBalancerAttributes:
         - Key: idle_timeout.timeout_seconds
           Value: '60'
-      Name: PracticalALB
-      Scheme: internet-facing 
+      Scheme: internet-facing
       SecurityGroups:
         - !Ref SecurityGroupALB
       Subnets:
@@ -97,7 +95,6 @@ Resources:
       UnhealthyThresholdCount: 2
       Matcher:
         HttpCode: 200
-      Name: PracticalTargetGroup
       Port: 80
       Protocol: HTTP
       TargetType: instance
@@ -110,7 +107,7 @@ Outputs:
   # Export Load Balancer Target Group
   ALBTargetGroup:
     Description: Web Server target group
-    Value: 
+    Value:
       Ref: PracticalTargetGroup
 
   # Export Application Load balancer DNS

@@ -1,42 +1,26 @@
 version: 0.2
 
 phases:
-  install:
-    runtime-versions:
-      python: 3.9
-    commands:
-      - echo "Installing AWS CLI..."
-      - pip install awscli --upgrade
-
   pre_build:
     commands:
-      - echo "Listing files in the working directory..."
-      - ls -al
-      - echo "Navigating to project directory"
-      - cd projectfolder
-      - echo "Verifying files inside the project directory"
-      - ls -al
-
+      - |
+        set -eu
+        cd "$CODEBUILD_SRC_DIR"
+        : "${ARTIFACT_BUCKET:?Set ARTIFACT_BUCKET to a packaging bucket in this Region}"
+        : "${DOMAIN_NAME:?Set DOMAIN_NAME to your existing hosted-zone domain}"
+        : "${CERTIFICATE_ARN:?Set CERTIFICATE_ARN to an issued regional ACM certificate}"
+        aws --version
+        for template in master.yaml vpc.yaml natgateway.yaml alb.yaml asg.yaml route53.yaml; do
+          aws cloudformation validate-template --template-body "file://$template"
+        done
   build:
     commands:
-      - echo "Validating CloudFormation templates..."
-      - for template in master.yaml vpc.yaml natgateway.yaml alb.yaml asg.yaml route53.yaml; do
-          aws cloudformation validate-template --template-body file://$template || { echo "Validation failed for $template" && exit 1; }
-        done
-
-      - echo "Deploying CloudFormation stack..."
-      - aws cloudformation deploy --template-file master.yaml --stack-name codebuilddemoproject --capabilities CAPABILITY_NAMED_IAM
-
-      - echo "Retrieving Route 53 output from the nested stack..."
-      - ROUTE53_STACK_NAME=$(aws cloudformation describe-stack-resources --stack-name codebuilddemoproject --query "StackResources[?LogicalResourceId=='ROUTE53Stack'].PhysicalResourceId" --output text)
-      - DOMAIN_NAME=$(aws cloudformation describe-stacks --stack-name $ROUTE53_STACK_NAME --query "Stacks[0].Outputs[?OutputKey=='WebsiteURL'].OutputValue" --output text)
-      - echo "Website is available at - $DOMAIN_NAME"
+      - |
+        set -eu
+        aws cloudformation package --template-file master.yaml --s3-bucket "$ARTIFACT_BUCKET" --output-template-file packaged.yaml
+        aws cloudformation deploy --template-file packaged.yaml --stack-name "${STACK_NAME:-practical-static-codebuild}" --parameter-overrides "DomainName=$DOMAIN_NAME" "ACMCertificateArn=$CERTIFICATE_ARN" --no-fail-on-empty-changeset
+        aws cloudformation describe-stacks --stack-name "${STACK_NAME:-practical-static-codebuild}" --query "Stacks[0].Outputs"
 
 artifacts:
   files:
-    - master.yaml
-    - vpc.yaml
-    - natgateway.yaml
-    - alb.yaml
-    - asg.yaml
-    - route53.yaml
+    - packaged.yaml
